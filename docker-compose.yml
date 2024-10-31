@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  static_site:
+    build:
+      context: ./static_site
+      dockerfile: Dockerfile
+    container_name: banners_static_site
+    ports:
+      - "10444:80"
+    volumes:
+      - ./site:/usr/share/nginx/html
+#      - ./static_site/nginx.conf:/etc/nginx/nginx.conf
+    environment:
+      - VIRTUAL_HOST=static.iamninja.ru
+
+  rclone:
+    image: rclone/rclone:latest
+    container_name: banners_rclone
+    environment:
+      - RCLONE_CONFIG=/config/rclone.conf
+      - RCLONE_DRIVE_NAME=${RCLONE_DRIVE_NAME}
+      - RCLONE_DRIVE_TYPE=${RCLONE_DRIVE_TYPE}
+      - RCLONE_DRIVE_SCOPE=${RCLONE_DRIVE_SCOPE}
+      - RCLONE_DRIVE_ROOT_FOLDER_ID=${RCLONE_DRIVE_ROOT_FOLDER_ID}
+      - SYNC_INTERVAL=${SYNC_INTERVAL}
+    volumes:
+      - ./config/:/config
+      - ./site/protected:/data
+    entrypoint: |
+      /bin/sh -c "
+      while true; do
+        rclone sync ${RCLONE_DRIVE_NAME}:static_site/ /data -P;
+        sleep ${SYNC_INTERVAL};
+      done
+      "
